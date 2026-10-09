@@ -35,6 +35,9 @@ jobs:
             sudo gem install cocoapods --no-document
           fi
 
+      - name: 更新依赖锁文件
+        run: flutter pub get
+
       - name: 编译真果鉴
         run: python3 scripts/build_ios.py --all-sources
 
