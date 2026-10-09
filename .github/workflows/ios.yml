@@ -1,0 +1,52 @@
+name: Build 真果鉴 iOS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: native/go.mod
+          cache-dependency-path: native/go.sum
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.4'
+          channel: stable
+          cache: true
+
+      - name: 准备 CocoaPods
+        run: |
+          if ! command -v pod >/dev/null 2>&1; then
+            sudo gem install cocoapods --no-document
+          fi
+
+      - name: 编译真果鉴
+        run: python3 scripts/build_ios.py --all-sources
+
+      - name: 打包未签名 IPA
+        run: |
+          mkdir -p build/ipa-staging/Payload
+          ditto build/ios/iphoneos/Runner.app build/ipa-staging/Payload/Runner.app
+          cd build/ipa-staging
+          zip -qry "$GITHUB_WORKSPACE/dist/ios/zhenguojian-unsigned.ipa" Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zhenguojian-ios
+          path: dist/ios/zhenguojian-unsigned.ipa
+          if-no-files-found: error
